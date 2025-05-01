@@ -1,0 +1,15 @@
+endpoints:
+  - name: "Production"
+    url: "https://api1.example.com/config"
+    auth: "Basic dXNlcjpwYXNz"
+  - name: "Staging"
+    url: "https://api2.example.com/config"
+    auth: "Bearer token123"
+
+settings:
+  timeout: 60
+  ignoredKeys:
+    - "id"
+    - "timestamp"
+    - "updated_at"
+  jsonPath: "settings.features"
