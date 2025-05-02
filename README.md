@@ -1,6 +1,6 @@
 # restcompre
 
-`restcompare` helps you verify that configuration data is consistent across different environments or deployments. It fetches JSON data from two REST API endpoints, optionally extracts specific sections using a JSON path, and compares them while ignoring specified keys.
+`rest-compare` helps you verify that configuration data is consistent across different environments or deployments. It fetches JSON data from two REST API endpoints, optionally extracts specific sections using a JSON path, and compares them while ignoring specified keys.
 
 ## Features
 
@@ -23,7 +23,7 @@ $ go build
 ## Usage
 
 ```bash
-$ restcompare config.yaml
+$ rest-compare config.yaml
 ```
 
 ### Exit Codes

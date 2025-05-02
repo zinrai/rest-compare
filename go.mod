@@ -1,4 +1,4 @@
-module github.com/zinrai/restcompare
+module github.com/zinrai/rest-compare
 
 go 1.24.2
 
