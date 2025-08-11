@@ -3,8 +3,9 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"strconv"
-	"strings"
+	"fmt"
+
+	"github.com/theory/jsonpath"
 )
 
 // Converts a JSON string to a map
@@ -17,65 +18,32 @@ func parseJSON(data []byte) (map[string]interface{}, error) {
 	return result, nil
 }
 
-// Extracts a value from a JSON object at the specified path
-// Path is specified in dot notation like "settings.timeout"
+// Extracts a value from a JSON object at the specified JSONPath
+// Path should be a valid JSONPath expression like "$.settings.timeout" or "$..name"
 func extractPath(data map[string]interface{}, path string) (interface{}, error) {
 	if path == "" {
 		return data, nil
 	}
 
-	parts := strings.Split(path, ".")
-	current := interface{}(data)
-
-	for _, part := range parts {
-		current, err := navigatePathElement(current, part)
-		if err != nil {
-			return nil, err
-		}
-
-		if current == nil {
-			return nil, errors.New("path element not found: " + part)
-		}
+	// Parse the JSONPath expression
+	p, err := jsonpath.Parse(path)
+	if err != nil {
+		return nil, fmt.Errorf("invalid JSONPath expression: %w", err)
 	}
 
-	return current, nil
-}
+	// Execute the JSONPath query
+	results := p.Select(data)
 
-// Handles navigation to a single path element
-func navigatePathElement(data interface{}, pathElement string) (interface{}, error) {
-	switch currentType := data.(type) {
-	case map[string]interface{}:
-		value, exists := currentType[pathElement]
-		if !exists {
-			return nil, errors.New("path element not found: " + pathElement)
-		}
-		return value, nil
-
-	case []interface{}:
-		index, err := parseIndex(pathElement)
-		if err != nil {
-			return nil, err
-		}
-
-		if index < 0 || index >= len(currentType) {
-			return nil, errors.New("array index out of range: " + pathElement)
-		}
-		return currentType[index], nil
-
-	default:
-		return nil, errors.New("cannot traverse path: non-object element")
-	}
-}
-
-// Parses a string to an array index
-func parseIndex(s string) (int, error) {
-	// Check if string is wrapped in square brackets
-	if len(s) >= 2 && s[0] == '[' && s[len(s)-1] == ']' {
-		// Extract the number between brackets
-		numStr := s[1 : len(s)-1]
-		return strconv.Atoi(numStr)
+	// Check if any results were found
+	if len(results) == 0 {
+		return nil, errors.New("no matching elements found for JSONPath: " + path)
 	}
 
-	// Try direct conversion
-	return strconv.Atoi(s)
+	// For comparison purposes, we expect a single result
+	// If multiple results are found, return an error
+	if len(results) > 1 {
+		return nil, fmt.Errorf("JSONPath returned multiple results (%d), expected single result", len(results))
+	}
+
+	return results[0], nil
 }

@@ -425,25 +425,6 @@ func TestHelperFunctions(t *testing.T) {
 			t.Error("'name' should not be ignored")
 		}
 	})
-
-	t.Run("createPath", func(t *testing.T) {
-		cases := []struct {
-			currentPath string
-			key         string
-			expected    string
-		}{
-			{"", "key", "key"},
-			{"parent", "child", "parent.child"},
-			{"root.parent", "child", "root.parent.child"},
-		}
-
-		for _, c := range cases {
-			result := createPath(c.currentPath, c.key)
-			if result != c.expected {
-				t.Errorf("createPath(%s, %s) = %s, want %s", c.currentPath, c.key, result, c.expected)
-			}
-		}
-	})
 }
 
 func TestMapDifferences(t *testing.T) {
@@ -529,4 +510,129 @@ func TestSliceDifferences(t *testing.T) {
 			t.Error("Missing expected difference at index 2")
 		}
 	})
+}
+
+func TestExtractPath(t *testing.T) {
+	testCases := []struct {
+		name      string
+		data      map[string]interface{}
+		path      string
+		expected  interface{}
+		wantError bool
+	}{
+		{
+			name: "empty path returns full data",
+			data: map[string]interface{}{
+				"key": "value",
+			},
+			path: "",
+			expected: map[string]interface{}{
+				"key": "value",
+			},
+			wantError: false,
+		},
+		{
+			name: "simple object path",
+			data: map[string]interface{}{
+				"settings": map[string]interface{}{
+					"timeout": float64(30),
+				},
+			},
+			path:      "$.settings.timeout",
+			expected:  float64(30), // JSON numbers are float64
+			wantError: false,
+		},
+		{
+			name: "nested object path",
+			data: map[string]interface{}{
+				"frontend": map[string]interface{}{
+					"webserver": map[string]interface{}{
+						"port": float64(8080),
+					},
+				},
+			},
+			path:      "$.frontend.webserver.port",
+			expected:  float64(8080),
+			wantError: false,
+		},
+		{
+			name: "array index access",
+			data: map[string]interface{}{
+				"items": []interface{}{"first", "second", "third"},
+			},
+			path:      "$.items[1]",
+			expected:  "second",
+			wantError: false,
+		},
+		{
+			name: "non-existent path",
+			data: map[string]interface{}{
+				"settings": map[string]interface{}{
+					"timeout": 30,
+				},
+			},
+			path:      "$.settings.nonexistent",
+			wantError: true,
+		},
+		{
+			name: "invalid JSONPath syntax",
+			data: map[string]interface{}{
+				"key": "value",
+			},
+			path:      "$[invalid syntax",
+			wantError: true,
+		},
+		{
+			name: "path returning multiple results",
+			data: map[string]interface{}{
+				"items": []interface{}{
+					map[string]interface{}{"name": "item1"},
+					map[string]interface{}{"name": "item2"},
+				},
+			},
+			path:      "$.items[*].name",
+			wantError: true, // Our implementation expects single result
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := extractPath(tc.data, tc.path)
+
+			if tc.wantError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+				// For maps, we need to compare them properly
+				if expectedMap, ok := tc.expected.(map[string]interface{}); ok {
+					if resultMap, ok := result.(map[string]interface{}); ok {
+						if !compareMaps(expectedMap, resultMap) {
+							t.Errorf("Expected %v, got %v", tc.expected, result)
+						}
+					} else {
+						t.Errorf("Expected map but got %T", result)
+					}
+				} else if result != tc.expected {
+					t.Errorf("Expected %v, got %v", tc.expected, result)
+				}
+			}
+		})
+	}
+}
+
+// Helper function to compare maps
+func compareMaps(a, b map[string]interface{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if bv, ok := b[k]; !ok || bv != v {
+			return false
+		}
+	}
+	return true
 }

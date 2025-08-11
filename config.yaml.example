@@ -12,4 +12,11 @@ settings:
     - "id"
     - "timestamp"
     - "updated_at"
-  jsonPath: "settings.features"
+  # JSONPath examples:
+  # Simple path: "$.settings.features"
+  # Nested path: "$.frontend.webserver.routes"
+  # Array access: "$.items[0]"
+  # All array items: "$.items[*]"
+  # Recursive search: "$..name"
+  # Filter: "$.items[?@.enabled == true]"
+  jsonPath: "$.settings.features"

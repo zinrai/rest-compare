@@ -1,11 +1,11 @@
-# restcompre
+# rest-compre
 
-`rest-compare` helps you verify that configuration data is consistent across different environments or deployments. It fetches JSON data from two REST API endpoints, optionally extracts specific sections using a JSON path, and compares them while ignoring specified keys.
+`rest-compare` helps you verify that configuration data is consistent across different environments or deployments. It fetches JSON data from two REST API endpoints, optionally extracts specific sections using JSONPath expressions, and compares them while ignoring specified keys.
 
 ## Features
 
 - Compare JSON data from two different API endpoints
-- Extract specific sections of JSON using dot notation path
+- Extract specific sections of JSON using standard JSONPath expressions
 - Ignore specified keys during comparison
 - Detailed output showing exact differences
 - Configurable via YAML configuration file
@@ -51,7 +51,7 @@ settings:
     - "id"
     - "timestamp"
     - "updated_at"
-  jsonPath: "frontend.config"   # Optional JSON path to compare
+  jsonPath: "$.frontend.config" # Optional JSONPath expression
 ```
 
 ### Configuration Options
@@ -66,22 +66,56 @@ settings:
 
 - `timeout`: HTTP request timeout in seconds (default: 30)
 - `ignoredKeys`: List of keys to exclude from comparison
-- `jsonPath`: Dot notation path to extract from JSON (e.g., `frontend.config`)
+- `jsonPath`: JSONPath expression to extract from JSON (e.g., `$.frontend.config`)
 
-## JSON Path
+## JSONPath
 
-The JSON path uses dot notation to navigate through nested objects. For example:
+This tool supports standard JSONPath expressions as defined in RFC 9535. The JSONPath expression must return a single result for comparison. If multiple results are returned, an error will be raised.
 
+## Examples
+
+### Example 1: Compare Entire Response
+
+```yaml
+endpoints:
+  - name: "Production"
+    url: "https://api.example.com/v1/config"
+  - name: "Staging"
+    url: "https://staging-api.example.com/v1/config"
+
+settings:
+  ignoredKeys:
+    - "timestamp"
+    - "version"
 ```
-frontend.webserver.routes
+
+### Example 2: Compare Specific Configuration Section
+
+```yaml
+endpoints:
+  - name: "Service A"
+    url: "https://service-a.example.com/config"
+  - name: "Service B"
+    url: "https://service-b.example.com/config"
+
+settings:
+  jsonPath: "$.database.connections.primary"
+  ignoredKeys:
+    - "connectionId"
 ```
 
-This will extract the `routes` property from within the `webserver` property of the `frontend` object.
+### Example 3: Compare Feature Flags
 
-Array notation is also supported:
+```yaml
+endpoints:
+  - name: "US Region"
+    url: "https://us.example.com/features"
+  - name: "EU Region"
+    url: "https://eu.example.com/features"
 
-```
-items[0].name
+settings:
+  jsonPath: "$.features[?@.enabled == true]"
+  timeout: 30
 ```
 
 ## License
